@@ -1,0 +1,11 @@
+name: a1
+physics_engine: ${..physics_engine}
+use_gpu: ${contains:"cuda",${..sim_device}}
+subscenes: ${..num_subscenes}
+num_threads: ${..num_threads}
+use_gpu_pipeline: ${eq:${..pipeline},"gpu"}
+numEnvs: null
+
+env:
+  num_envs: ${.numEnvs}
+  numEnvs: ${resolve_default:4096,${...num_envs}}

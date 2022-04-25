@@ -1,0 +1,13 @@
+
+# task: "anymal_c_flat"
+# resume: False
+# headless: False
+# horovod: False
+# rl_device: "cuda:0"
+experiment_name: igma
+# run_name: null
+# load_run: null
+# checkpoint: null
+# num_envs: null
+# seed: 0
+# max_iterations: null
