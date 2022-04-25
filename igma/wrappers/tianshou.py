@@ -59,7 +59,6 @@ class IGMAEnvWorker(NestedEnvWorker):
                 obs_dict = self.env.reset()  # type: ignore
                 self.result = obs_dict['obs']
             else:
-                print(sid)
                 try:
                     obs_dict = self.env.reset(indices=sid)  # type: ignore
                     self.result = obs_dict['obs']
@@ -115,7 +114,6 @@ class NestedVectorEnv(BaseVectorEnv):
         pid = [id] if np.isscalar(id) else id  # type: ignore
         if len(pid) == pid[-1] - pid[0] + 1:
             wid = [i for i in range(self.num_workers) if not (self.beg_envs[i] > pid[-1] or self.end_envs[i] < pid[0])]
-            print(wid, pid)
             return [
                 None if self.beg_envs[w] >= pid[0] and self.end_envs[w] <= pid[-1] else
                 range(max(self.beg_envs[w], pid[0]), min(self.end_envs[w], pid[-1]+1))
@@ -141,8 +139,6 @@ class NestedVectorEnv(BaseVectorEnv):
 
     def step(self, action: Any, id: ID_TYPE = None) -> Tuple:
         self._assert_is_not_closed()
-        print('id', id)
-        print('action', len(action))
         id = self._wrap_id(id)
         if not self.is_async:
             # assert len(action) == len(id)
@@ -202,7 +198,6 @@ class NestedVectorEnv(BaseVectorEnv):
         for i in id:
             self.workers[i].send(None, sid[i])
         obs_list = [self.workers[i].recv() for i in id]
-        print('reset', obs_list)
         obs_bats = [Batch({'0': v}) for v in obs_list]
         obs_cat = Batch.cat(obs_bats)
         obs = obs_cat['0']
@@ -283,7 +278,4 @@ class NestedVectorReplayBuffer(VectorReplayBuffer):
                 _alloc_by_keys_diff(self._meta, batch, self.maxsize, False)
             self._set_batch_for_children()
             self._meta[ptrs] = batch
-        # print(ep_rews)
-        # print(ep_lens)
-        # print(ep_idxs)
         return ptrs, np.array(ep_rews), np.array(ep_lens), np.array(ep_idxs)

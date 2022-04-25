@@ -7,14 +7,14 @@ import pprint
 
 import numpy as np
 
-import igma.tasks.joust
+import igma_tasks
 from igma.wrappers.tianshou import IGMAVectorEnv, NestedVectorReplayBuffer
 from igma.utils.registry import make
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.data import Collector, ReplayBuffer, VectorReplayBuffer
+from tianshou.data import Collector
 from tianshou.policy import SACPolicy
 from tianshou.trainer import offpolicy_trainer
 from tianshou.utils import TensorboardLogger
@@ -88,7 +88,6 @@ def make_env(cfg, num_env=None):
 
 def test_sac(cfg):
     args = get_args()
-    # env = gym.make(args.task)
     cfg = omegaconf_to_dict(cfg)
     # env = make_env(cfg, args.training_num + args.test_num)
     env = make_env(cfg, args.training_num)
@@ -160,11 +159,6 @@ def test_sac(cfg):
         policy.load_state_dict(torch.load(args.resume_path, map_location=args.device))
         print("Loaded agent from: ", args.resume_path)
 
-    # collector
-    # if len(train_envs) > 1:
-        # buffer = VectorReplayBuffer(args.buffer_size, len(train_envs))
-    # else:
-        # buffer = ReplayBuffer(args.buffer_size)
     buffer = NestedVectorReplayBuffer(args.buffer_size, len(train_envs))
     train_collector = Collector(policy, train_envs, buffer, exploration_noise=True)
     train_collector.collect(n_step=args.start_timesteps * args.training_num, random=True)
@@ -183,7 +177,6 @@ def test_sac(cfg):
     test_collector = None
     if args.test_env:
         test_envs = IGMAVectorEnv([lambda: env, range(args.training_num, args.training_num + args.test_num)])
-        print(len(test_envs))
         test_envs.seed(args.seed)
         test_collector = Collector(policy, test_envs)
 

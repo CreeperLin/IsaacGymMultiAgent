@@ -93,7 +93,6 @@ def import_registry():
         builder = partial(legged_gym_builder, name)
         register(builder, reg_name)
         register(builder, name)
-        # register(task_registry.task_classes[name], name)
 
 
 import_registry()

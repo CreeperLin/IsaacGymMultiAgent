@@ -1,5 +1,5 @@
 import yaml
-import igma.tasks.joust
+import igma_tasks
 from igma.utils.registry import make
 from igma.utils.omegaconf import register_resolvers
 from igma.wrappers.sb3 import IGMAVecEnv
@@ -20,7 +20,6 @@ def main(cfg):
         headless=cfg['headless'],
     )
     env = IGMAVecEnv(env)
-    # env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.)
 
     tot_steps = 1e6
     model = SAC("MlpPolicy", env, verbose=1)

@@ -1,5 +1,4 @@
-import igma.tasks.joust
-import igma.tasks.legged_gym
+import igma_tasks
 from isaacgymenvs.train import launch_rlg_hydra
 import hydra
 
