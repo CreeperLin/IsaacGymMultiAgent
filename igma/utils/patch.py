@@ -1,4 +1,5 @@
 """Patch for IsaacGymEnvs."""
+import os
 import sys
 import importlib
 import importlib.util
@@ -6,6 +7,9 @@ from importlib.abc import Loader, MetaPathFinder
 from importlib.machinery import ModuleSpec
 from typing import Optional, Sequence, Union
 import types
+
+import isaacgymenvs
+isaacgymenvs_modules = list(os.walk(isaacgymenvs.__path__._path[0]))[0][1]
 
 
 class IGEImporter(Loader, MetaPathFinder):
@@ -15,7 +19,7 @@ class IGEImporter(Loader, MetaPathFinder):
         self, fullname: str, path: Optional[Sequence[Union[bytes, str]]], target: Optional[types.ModuleType] = None
     ) -> Optional[ModuleSpec]:
         """Handle isaacgymenvs imports."""
-        if fullname in ['tasks', 'utils']:
+        if fullname in isaacgymenvs_modules:
             return importlib.util.spec_from_loader(fullname, self)
         return None
 

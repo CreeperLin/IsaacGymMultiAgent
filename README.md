@@ -61,6 +61,19 @@ cd examples/original
 python3 train.py task=Ant test=True headless=False checkpoint=path/to/checkpoint.pt
 ```
 
+### Rendering
+
+Supported displays:
+- VNC: Tested on ```tigervnc-standalone-server```
+- Alternatives: Xvfb, VirtualGL, etc.
+
+Add ```headless=False``` to enable rendering
+
+```bash
+export DISPLAY=:1
+python train.py ... headless=False
+```
+
 ## List of Environments
 
 | Name                  | Description                                        |
