@@ -10,9 +10,9 @@ import xml.etree.ElementTree as ET
 from isaacgym import gymutil, gymtorch, gymapi
 from isaacgym.torch_utils import tensor_clamp, torch_rand_float, to_torch
 from isaacgymenvs.utils.torch_jit_utils import quat_axis
-from igma.tasks.base.ma_vec_task import MultiAgentVecTask,\
-    reset_any_team_all_terminated, reset_max_episode_length,\
-    obs_all_nearest_neighbors, obs_get_by_env_index, obs_same_team_index, obs_rel_pos_by_env_index,\
+from igma.tasks.base.ma_vec_task import MultiAgentVecTask
+from igma.functional import reset_any_team_all_terminated, reset_max_episode_length,\
+    find_all_nearest_neighbors, select_by_env_index, is_same_team_index, rel_pos_by_env_index,\
     reward_agg_sum, reward_reweight_team,\
     terminated_buf_update,\
     start_pos_circle, start_pos_normal, start_pos_uniform
@@ -343,10 +343,10 @@ def compute_balljoust_observations(
 
     if num_agents > 1:
         max_dist = 1.
-        ind = obs_all_nearest_neighbors(root_positions, num_envs, num_agents, num_rng, max_dist=max_dist)
-        rel_obs_obs = obs_get_by_env_index(obs_buf[..., :n_obs], ind, num_envs, num_agents)
-        rel_pos_obs = obs_rel_pos_by_env_index(root_positions, ind, num_envs, num_agents)
-        team_obs = obs_same_team_index(ind, num_envs, num_agents, num_teams).float()
+        ind = find_all_nearest_neighbors(root_positions, num_envs, k=num_rng, max_dist=max_dist)
+        rel_obs_obs = select_by_env_index(obs_buf[..., :n_obs], ind, num_envs, num_agents)
+        rel_pos_obs = rel_pos_by_env_index(root_positions, ind, num_envs, num_agents)
+        team_obs = is_same_team_index(ind, num_envs, num_agents, num_teams).float()
         ma_obs = torch.cat((
             team_obs.unsqueeze(-1),
             rel_pos_obs,
@@ -457,7 +457,7 @@ def compute_balljoust_reward(
         reward = torch.where(jousted.flatten(), torch.ones_like(reward) * killed_cost, reward)
         joust_score = 1000
         # joust_score = 0
-        same_team = obs_same_team_index(ind.unsqueeze(-1), num_envs, num_agents, num_teams).squeeze()
+        same_team = is_same_team_index(ind.unsqueeze(-1), num_envs, num_agents, num_teams).squeeze()
         ek_jouster = torch.logical_and(torch.logical_not(same_team), jouster)
         reward[ek_jouster.flatten()] += joust_score
         # tk_jouster = torch.logical_and(torch.logical_not(same_team), jouster)

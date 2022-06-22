@@ -74,12 +74,10 @@ def debox(obj):
 def legged_gym_builder(name, *args, **kwargs):
     env_cfg, _ = task_registry.get_cfgs(name=name)
     cfg = kwargs.pop('cfg', None)
-    print(args, kwargs, cfg)
     ovr_args = get_default_env_args(cfg)
     update_cfg(env_cfg, cfg)
     ovr_args.__dict__.update(kwargs)
     ovr_args.physics_engine = {'flex': gymapi.SIM_FLEX, 'physx': gymapi.SIM_PHYSX}[ovr_args.physics_engine]
-    print('args', ovr_args)
     env, env_cfg = task_registry.make_env(name=name, *args, args=ovr_args, env_cfg=env_cfg)
     print('env', debox(env_cfg))
     patch_env(env)

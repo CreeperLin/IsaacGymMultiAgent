@@ -1,4 +1,5 @@
 import igma_tasks
+from igma.utils.omegaconf import register_resolvers
 from isaacgymenvs.train import launch_rlg_hydra
 import hydra
 
@@ -9,4 +10,5 @@ def launch_rlg_hydra_1(cfg):
 
 
 if __name__ == "__main__":
+    register_resolvers()
     launch_rlg_hydra_1()

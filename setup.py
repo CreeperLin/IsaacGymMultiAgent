@@ -4,9 +4,12 @@ from setuptools import setup
 
 root_dir = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(root_dir)
-import igma
+try:
+    import igma
+    version = igma.__version__
+except Exception:
+    version = open(os.path.join(root_dir, 'igma', '__init__.py')).readlines()[0].strip().split()[-1].strip('\'')
 readme = open(os.path.join(root_dir, 'README.md')).read()
-version = igma.__version__
 requirements = [
     name.rstrip()
     for name in open(os.path.join(root_dir, 'requirements.txt')).readlines()
