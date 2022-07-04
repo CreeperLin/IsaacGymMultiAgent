@@ -5,6 +5,7 @@ task_paths = [
     'igma.tasks.joust',
     'igma.tasks.legged_gym',
     'igma.tasks.legged',
+    'igma.tasks.parallel'
 ]
 
 for path in task_paths:

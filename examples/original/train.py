@@ -1,4 +1,4 @@
-import igma_tasks
+import igma.tasks.all
 from igma.utils.omegaconf import register_resolvers
 from isaacgymenvs.train import launch_rlg_hydra
 import hydra

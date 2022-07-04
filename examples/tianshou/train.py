@@ -7,7 +7,7 @@ import pprint
 
 import numpy as np
 
-import igma_tasks
+import igma.tasks.all
 from igma.wrappers.tianshou import IGMAVectorEnv, NestedVectorReplayBuffer
 from igma.utils.registry import make
 

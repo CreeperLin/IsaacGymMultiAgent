@@ -1,5 +1,5 @@
 import traceback
-import igma_tasks
+import igma.tasks.all
 from legged_gym.utils import get_args, task_registry
 from isaacgymenvs.utils.reformat import omegaconf_to_dict
 from igma.utils.omegaconf import register_resolvers

@@ -1,5 +1,5 @@
 import yaml
-import igma_tasks
+import igma.tasks.all
 from igma.utils.registry import make
 from igma.utils.omegaconf import register_resolvers
 from igma.wrappers.sb3 import IGMAVecEnv
