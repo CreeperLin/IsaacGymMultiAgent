@@ -80,35 +80,51 @@ def _default_override_setter(override, args, kwargs):
     return args, kwargs
 
 
-def _default_split_fn(obj, sizes):
-    if isinstance(obj, (list, tuple)) and len(obj):
-        return zip(*(_default_split_fn(o, sizes) for o in obj))
-    if isinstance(obj, dict) and len(obj):
-        return [
-            {k: sv for k, sv in zip(obj.keys(), vs)} for vs in zip(*(_default_split_fn(v, sizes) for v in obj.values()))
-        ]
-    if isinstance(obj, Tensor):
-        return torch.split(obj, split_size_or_sections=(obj.size(0) // sizes), dim=0)
-    if isinstance(obj, np.ndarray):
-        return np.split(obj, indices_or_sections=sizes, axis=0)
-    return [obj] * sizes
+class DefaultSplitFn():
+
+    def __init__(self, devices=None) -> None:
+        self.devices = devices
+
+    def __call__(self, obj, sizes, extras=None):
+        if isinstance(obj, (list, tuple)) and len(obj):
+            return zip(*(self(o, sizes, extras) for o in obj))
+        if isinstance(obj, dict) and len(obj):
+            return [
+                {k: sv for k, sv in zip(obj.keys(), vs)} for vs in zip(*(self(v, sizes, extras) for v in obj.values()))
+            ]
+        if isinstance(obj, Tensor):
+            tensors = torch.split(obj, split_size_or_sections=(obj.size(0) // sizes), dim=0)
+            if self.devices is None:
+                return tensors
+            return [t.to(device=d) for t, d in zip(tensors, self.devices)]
+        if isinstance(obj, np.ndarray):
+            return np.split(obj, indices_or_sections=sizes, axis=0)
+        return [obj] * sizes
 
 
-def _default_merge_fn(objs):
-    if not isinstance(objs, (list, tuple)):
-        return objs
-    elm = objs[0]
-    if isinstance(elm, (list, tuple)):
-        return [_default_merge_fn(elms) for elms in zip(*objs)]
-    if isinstance(elm, dict):
-        return {k: _default_merge_fn(vs) for k, vs in zip(elm.keys(), zip(*(e.values() for e in objs)))}
-    if isinstance(elm, Tensor):
-        if len(elm.size()):
-            return torch.cat([o.to(device=elm.device) for o in objs], dim=0)
-        return sum([o.to(device=elm.device) for o in objs])
-    if isinstance(elm, np.ndarray):
-        return np.concatenate(objs, axis=0)
-    return elm
+class DefaultMergeFn():
+
+    def __init__(self, device=None) -> None:
+        self.device = device
+
+    def __call__(self, objs, extras=None):
+        if not isinstance(objs, (list, tuple)):
+            return objs
+        elm = objs[0]
+        if isinstance(elm, (list, tuple)):
+            return [self(elms, extras) for elms in zip(*objs)]
+        if isinstance(elm, dict):
+            return {k: self(vs, extras) for k, vs in zip(elm.keys(), zip(*(e.values() for e in objs)))}
+        if isinstance(elm, Tensor):
+            device = elm.device if self.device is None else self.device
+            if len(elm.size()):
+                return torch.cat([o.to(device=device) for o in objs], dim=0)
+            return sum([o.to(device=device) for o in objs])
+        if isinstance(elm, np.ndarray):
+            return np.concatenate(objs, axis=0)
+        if not isinstance(elm, str) and hasattr(elm, '__add__'):
+            return sum(objs)
+        return elm
 
 
 def _default_task_fn(task_name, task_args=None, task_kwargs=None):
@@ -153,6 +169,7 @@ class EnvParallel():
         override_setter=None,
         split_fn=None,
         merge_fn=None,
+        merge_device=None,
         task_args=None,
         task_kwargs=None,
         task_cfg=None,
@@ -171,7 +188,8 @@ class EnvParallel():
             task_fn = partial(_default_task_fn, task)
         if devices is not None:
             num_tasks = len(devices)
-            overrides = [{'sim_device': 'cuda:{}'.format(d)} for d in devices]
+            devices = ['cuda:{}'.format(d) for d in devices]
+            overrides = [{'sim_device': d} for d in devices]
         if num_tasks is None:
             raise ValueError('num_tasks required')
         overrides = [None] * num_tasks if overrides is None else overrides
@@ -187,8 +205,8 @@ class EnvParallel():
             ctx = init_fn(partial(task_fn, _task_args, _task_kwargs), **(parallel_kwargs or {}))
             ctxs.append(ctx)
         self.ctxs = ctxs
-        self.merge_fn = _default_merge_fn if merge_fn is None else merge_fn
-        self.split_fn = _default_split_fn if split_fn is None else split_fn
+        self.merge_fn = DefaultMergeFn(device=merge_device) if merge_fn is None else merge_fn
+        self.split_fn = DefaultSplitFn(devices=devices) if split_fn is None else split_fn
         self.wrapped_fns = {}
         self.wrapped_table = _default_wrapped_table.copy()
         if wrapped_table is not None:
@@ -203,7 +221,8 @@ class EnvParallel():
         wrapped_fn = self.wrapped_fns.get(name)
         if wrapped_fn is None:
             def wrapped(*args, **kwargs):
-                list_args_kwargs = self.split_fn((args, kwargs), len(self.ctxs))
+                extras = {'attr': name}
+                list_args_kwargs = self.split_fn((args, kwargs), len(self.ctxs), extras)
                 for ctx, args_kwargs in zip(self.ctxs, list_args_kwargs):
                     local_send_fn = ctx[0]
                     local_send_fn((name, *args_kwargs))
@@ -212,11 +231,14 @@ class EnvParallel():
                     local_recv_fn = ctx[1]
                     ret = local_recv_fn()
                     rets.append(ret)
-                return self.merge_fn(rets)
+                return self.merge_fn(rets, extras)
             self.wrapped_fns[name] = wrapped
             wrapped_fn = wrapped
-        if self.wrapped_table.get(name):
+        wrapped = self.wrapped_table.get(name)
+        if wrapped == 1:
             return wrapped_fn
+        if wrapped == -1:
+            return None
         return wrapped_fn()
 
 

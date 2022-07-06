@@ -42,10 +42,9 @@ def patch_env(env):
         return obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras
 
     def reset(*args, **kwargs):
-        self = env
-        self.reset_idx(torch.arange(self.num_envs, device=self.device))
-        zero_action = torch.zeros(self.num_envs, self.num_actions, device=self.device, requires_grad=False)
-        obs, privileged_obs, _, _, _ = self.step(zero_action)
+        env.reset_idx(torch.arange(env.num_envs, device=env.device))
+        zero_action = torch.zeros(env.num_envs, env.num_actions, device=env.device, requires_grad=False)
+        obs, privileged_obs, _, _, _ = env.step(zero_action)
         return obs, privileged_obs
 
     def get_observations(*args, **kwargs):

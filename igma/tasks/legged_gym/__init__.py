@@ -65,12 +65,6 @@ def patch_env(env):
     env.reset = new_reset
 
 
-def debox(obj):
-    if isinstance(obj, (dict, list, tuple, str, int, float, bytes)):
-        return obj
-    return {k: debox(getattr(obj, k)) for k in dir(obj) if not k.startswith('_')}
-
-
 def legged_gym_builder(name, *args, **kwargs):
     env_cfg, _ = task_registry.get_cfgs(name=name)
     cfg = kwargs.pop('cfg', None)
@@ -79,7 +73,6 @@ def legged_gym_builder(name, *args, **kwargs):
     ovr_args.__dict__.update(kwargs)
     ovr_args.physics_engine = {'flex': gymapi.SIM_FLEX, 'physx': gymapi.SIM_PHYSX}[ovr_args.physics_engine]
     env, env_cfg = task_registry.make_env(name=name, *args, args=ovr_args, env_cfg=env_cfg)
-    print('env', debox(env_cfg))
     patch_env(env)
     return env
 
