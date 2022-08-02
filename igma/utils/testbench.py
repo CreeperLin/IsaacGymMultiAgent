@@ -260,6 +260,15 @@ class Testbench():
         self.gym.draw_viewer(self.viewer, self.sim, True)
         self.gym.sync_frame_time(self.sim)
 
+    def step(self):
+        if self.pre_sim_setter is not None:
+            self.pre_sim_setter(self)
+        self.gym.simulate(self.sim)
+        if self.device == 'cpu':
+            self.gym.fetch_results(self.sim, True)
+        if self.post_sim_setter is not None:
+            self.post_sim_setter(self)
+
     def run(self):
         t0 = time.monotonic()
         fps_window = 200
@@ -268,13 +277,7 @@ class Testbench():
         while True:
             step += 1
             self.render()
-            if self.pre_sim_setter is not None:
-                self.pre_sim_setter(self)
-            self.gym.simulate(self.sim)
-            if self.device == 'cpu':
-                self.gym.fetch_results(self.sim, True)
-            if self.post_sim_setter is not None:
-                self.post_sim_setter(self)
+            self.step()
             if (step+1) == fps_window:
                 t1 = time.monotonic()
                 print('fps: {}'.format(fps_window / (t1-t0)))

@@ -9,17 +9,21 @@ from torch import Tensor
 def find_target_nearest_neighbors(
     pos: Tensor,
     target: Tensor,
+    num_groups: int = 1,
     k: int = 0,
     max_dist: int = 0
 ):
-    dist = torch.square((pos.unsqueeze(0) - target.unsqueeze(1))).sum(dim=-1)
+    # dist = torch.square((pos.unsqueeze(0) - target.unsqueeze(1))).sum(dim=-1)   # [T, N]
+    dist = torch.cdist(target.view(num_groups, -1, 3), pos.view(num_groups, -1, 3))
     if k:
         val, ind = torch.topk(dist, k, largest=False)
         if max_dist:
             ind = ind[val < max_dist]
         return ind
+    all_ind = torch.arange(0, len(pos)).repeat(len(target), 1).to(device=pos.device)
     if max_dist:
-        return torch.arange(0, len(pos)).repeat(len(target), 1).to(device=pos.device)[dist < (max_dist ** 2)]
+        return all_ind[dist < (max_dist ** 2)]
+    return all_ind
 
 
 @torch.jit.script
