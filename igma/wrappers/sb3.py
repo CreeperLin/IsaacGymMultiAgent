@@ -1,38 +1,56 @@
 from typing import Any, Callable, List, Optional, Sequence, Type, Union
 
+import torch
 import gym
+import gym.spaces
+import gymnasium
 import numpy as np
 
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv, VecEnvIndices, VecEnvObs, VecEnvStepReturn
 from isaacgymenvs.tasks.base.vec_task import VecTask
 
 
+def patch_space(space):
+    if isinstance(space, gym.spaces.Box):
+        return gymnasium.spaces.Box(low=space.low, high=space.high, shape=space.shape, dtype=space.dtype)
+
+
 class IGMAVecEnv(VecEnv):
 
     def __init__(self, env: VecTask):
         self.env = env
-        VecEnv.__init__(self, env.num_environments, env.observation_space, env.action_space)
+        VecEnv.__init__(self, env.num_environments, patch_space(env.observation_space), patch_space(env.action_space))
         self.actions = None
+        self.dones = np.zeros(env.num_environments)
         self.metadata = getattr(env, 'metadata', None)
 
     def step_async(self, actions: np.ndarray) -> None:
-        self.actions = actions
+        self.actions = torch.from_numpy(actions)
 
     def step_wait(self) -> VecEnvStepReturn:
         obs_dict, rew_buf, reset_buf, extras = self.env.step(self.actions)
         obs_buf = obs_dict['obs']
-        # return (self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos))
-        obs_buf = obs_buf.cpu().numpy()
-        rew_buf = rew_buf.cpu().numpy()
-        reset_buf = reset_buf.cpu().numpy()
-        return obs_buf, rew_buf, reset_buf, extras
+        obs_buf = self._transform_buf(obs_buf)
+        rew_buf = self._transform_buf(rew_buf)
+        reset_buf = self._transform_buf(reset_buf)
+        if not isinstance(extras, (list, tuple)):
+            extras = [extras] * self.env.num_environments
+        # print(reset_buf)
+        self.dones = np.logical_or(self.dones, reset_buf)
+        # print(self.dones)
+        return obs_buf, rew_buf, self.dones, extras
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         return [seed for _ in self.num_envs]
 
+    def _transform_buf(self, buf):
+        return buf.cpu().numpy()
+
     def reset(self) -> VecEnvObs:
-        obs = self.env.reset()
-        return obs
+        self.dones.fill(0)
+        obs_dict = self.env.reset()
+        obs_buf = obs_dict['obs']
+        return self._transform_buf(obs_buf)
 
     def close(self) -> None:
         getattr(self.env, 'close', lambda: None)()

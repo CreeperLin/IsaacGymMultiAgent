@@ -1,6 +1,6 @@
 """Patch for IsaacGymEnvs."""
-import os
 import sys
+import pkgutil
 import importlib
 import importlib.util
 from importlib.abc import Loader, MetaPathFinder
@@ -9,7 +9,7 @@ from typing import Optional, Sequence, Union
 import types
 
 import isaacgymenvs
-isaacgymenvs_modules = list(os.walk(isaacgymenvs.__path__._path[0]))[0][1]
+isaacgymenvs_modules = list(map(lambda x: x.name, pkgutil.iter_modules(isaacgymenvs.__path__)))
 
 
 class IGEImporter(Loader, MetaPathFinder):
