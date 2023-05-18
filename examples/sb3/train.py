@@ -28,7 +28,6 @@ def main(cfg):
     tot_steps = 1e6
     model_cls = getattr(stable_baselines3, cfg.get('model_cls', 'PPO'))
     model = model_cls("MlpPolicy", env, verbose=1)
-    # model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=tot_steps)
     model.save('./ckpt.zip')
 

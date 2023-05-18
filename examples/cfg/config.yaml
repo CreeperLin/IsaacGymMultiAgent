@@ -52,7 +52,7 @@ wandb_logcode_dir: ''
 capture_video: False
 capture_video_freq: 1464
 capture_video_len: 100
-force_render: False
+force_render: True
 virtual_screen_capture: False
 
 # disables rendering

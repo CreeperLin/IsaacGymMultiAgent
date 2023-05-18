@@ -3,7 +3,10 @@ from typing import Any, Callable, List, Optional, Sequence, Type, Union
 import torch
 import gym
 import gym.spaces
-import gymnasium
+try:
+    import gymnasium
+except ImportError:
+    gymnasium = None
 import numpy as np
 
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv, VecEnvIndices, VecEnvObs, VecEnvStepReturn
@@ -11,6 +14,8 @@ from isaacgymenvs.tasks.base.vec_task import VecTask
 
 
 def patch_space(space):
+    if gymnasium is None:
+        return space
     if isinstance(space, gym.spaces.Box):
         return gymnasium.spaces.Box(low=space.low, high=space.high, shape=space.shape, dtype=space.dtype)
 
