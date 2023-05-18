@@ -1,0 +1,12 @@
+recursive-include docs *.bat
+recursive-include docs *.py
+recursive-include docs *.rst
+recursive-include docs Makefile
+recursive-include examples *.py
+recursive-include examples *.yml
+recursive-include examples *.yaml
+recursive-include tests *.py
+recursive-include tests *.yml
+recursive-include tests *.yaml
+include .coveragerc
+include *.md

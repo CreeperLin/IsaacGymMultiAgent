@@ -32,7 +32,8 @@ def patch_env(env):
         return
 
     fn_step = env.step
-    fn_reset = env.reset
+
+    # fn_reset = env.reset
 
     def step(*args, **kwargs):
         ret = fn_step(*args, **kwargs)

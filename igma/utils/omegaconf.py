@@ -1,6 +1,5 @@
 from omegaconf import OmegaConf
 
-
 # Resolvers used in hydra configs (see https://omegaconf.readthedocs.io/en/2.1_branch/usage.html#resolvers)
 _resolvers = {
     'eq': lambda x, y: x.lower() == y.lower(),

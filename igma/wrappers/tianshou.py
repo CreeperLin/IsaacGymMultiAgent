@@ -10,7 +10,6 @@ from tianshou.data import Batch
 from tianshou.data.batch import _alloc_by_keys_diff, _create_value
 import torch
 
-
 ID_TYPE = Optional[Union[int, List[int], np.ndarray]]
 
 
@@ -48,8 +47,7 @@ class IGMAEnvWorker(NestedEnvWorker):
 
     @staticmethod
     def wait(  # type: ignore
-        workers: List, wait_num: int, timeout: Optional[float] = None
-    ) -> List:
+            workers: List, wait_num: int, timeout: Optional[float] = None) -> List:
         # Sequential EnvWorker objects are always ready
         return workers
 
@@ -115,10 +113,12 @@ class NestedVectorEnv(BaseVectorEnv):
         if len(pid) == pid[-1] - pid[0] + 1:
             wid = [i for i in range(self.num_workers) if not (self.beg_envs[i] > pid[-1] or self.end_envs[i] < pid[0])]
             return [
-                None if self.beg_envs[w] >= pid[0] and self.end_envs[w] <= pid[-1] else
-                range(max(self.beg_envs[w], pid[0]), min(self.end_envs[w], pid[-1]+1))
-                for w in wid]
-        return [[j-self.beg_envs[i] for j in pid if self.beg_envs[i] <= j < self.end_envs[i]]
+                None if self.beg_envs[w] >= pid[0] and self.end_envs[w] <= pid[-1] else range(
+                    max(self.beg_envs[w], pid[0]), min(self.end_envs[w], pid[-1] + 1)) for w in wid
+            ]
+        return [[j - self.beg_envs[i]
+                 for j in pid
+                 if self.beg_envs[i] <= j < self.end_envs[i]]
                 for i in range(self.num_workers)]
 
     def get_env_attr(self, key: str, id: ID_TYPE = None) -> List[Any]:
@@ -144,7 +144,7 @@ class NestedVectorEnv(BaseVectorEnv):
             # assert len(action) == len(id)
             assert len(action) == sum(self.len_envs[i] for i in id)
             for i, j in enumerate(id):
-                self.workers[j].send(action[self.beg_envs[i]:self.beg_envs[i]+self.len_envs[i]])
+                self.workers[j].send(action[self.beg_envs[i]:self.beg_envs[i] + self.len_envs[i]])
             result = []
             for j in id:
                 obs, rew, done, info = self.workers[j].recv()
@@ -162,9 +162,7 @@ class NestedVectorEnv(BaseVectorEnv):
                 self.ready_id = [x for x in self.ready_id if x not in id]
             ready_conns: List[EnvWorker] = []
             while not ready_conns:
-                ready_conns = self.worker_class.wait(
-                    self.waiting_conn, self.wait_num, self.timeout
-                )
+                ready_conns = self.worker_class.wait(self.waiting_conn, self.wait_num, self.timeout)
             result = []
             for conn in ready_conns:
                 waiting_index = self.waiting_conn.index(conn)
@@ -175,15 +173,10 @@ class NestedVectorEnv(BaseVectorEnv):
                 result.append((obs, rew, done, info))
                 self.ready_id.append(env_id)
         obs_list, rew_list, done_list, info_list = zip(*result)
-        obs_bats, rew_bats, done_bats, info_bats = map(
-            lambda lst: [Batch({'0': v}) for v in lst], [obs_list, rew_list, done_list, info_list]
-        )
-        obs_cat, rew_cat, done_cat, info_cat = map(
-            Batch.cat, [obs_bats, rew_bats, done_bats, info_bats]
-        )
-        obs, rew, done, info = map(
-            lambda b: b['0'], [obs_cat, rew_cat, done_cat, info_cat]
-        )
+        obs_bats, rew_bats, done_bats, info_bats = map(lambda lst: [Batch({'0': v}) for v in lst],
+                                                       [obs_list, rew_list, done_list, info_list])
+        obs_cat, rew_cat, done_cat, info_cat = map(Batch.cat, [obs_bats, rew_bats, done_bats, info_bats])
+        obs, rew, done, info = map(lambda b: b['0'], [obs_cat, rew_cat, done_cat, info_cat])
         if self.obs_rms and self.update_obs_rms:
             self.obs_rms.update(obs)
         return self.normalize_obs(obs), rew, done, info
@@ -226,8 +219,8 @@ class NestedVectorReplayBuffer(VectorReplayBuffer):
     def add(
         self,
         batch: Batch,
-        buffer_ids: Optional[Union[np.ndarray, List[int]]] = None
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        buffer_ids: Optional[Union[np.ndarray,
+                                   List[int]]] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Add a batch of data into ReplayBufferManager.
 
         Each of the data's length (first dimension) must equal to the length of
@@ -254,9 +247,8 @@ class NestedVectorReplayBuffer(VectorReplayBuffer):
             buffer_ids = np.arange(self.buffer_num)
         ptrs, ep_lens, ep_rews, ep_idxs = [], [], [], []
         for batch_idx, buffer_id in enumerate(buffer_ids):
-            ptr, ep_rew, ep_len, ep_idx = self.buffers[buffer_id]._add_index(
-                batch.rew[batch_idx], batch.done[batch_idx]
-            )
+            ptr, ep_rew, ep_len, ep_idx = self.buffers[buffer_id]._add_index(batch.rew[batch_idx],
+                                                                             batch.done[batch_idx])
             ptrs.append(ptr + self._offset[buffer_id])
             ep_lens.append(ep_len)
             ep_rews.append(ep_rew)

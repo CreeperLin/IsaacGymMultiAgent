@@ -1,6 +1,7 @@
 import yaml
 import numpy as np
-import igma.tasks.all
+import igma.tasks.all  # noqa: F401
+from igma.utils.paths import get_cfg_dir
 from igma.utils.registry import make
 from igma.utils.omegaconf import register_resolvers
 from igma.wrappers.sb3 import IGMAVecEnv
@@ -50,4 +51,4 @@ if __name__ == "__main__":
         main(yaml.safe_load_all(open('./config.yml', 'r')))
     else:
         register_resolvers()
-        hydra.main(config_name="config", config_path="./cfg")(main)()
+        hydra.main(config_name="config", config_path=get_cfg_dir())(main)()

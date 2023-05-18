@@ -1,7 +1,8 @@
 import traceback
-import igma.tasks.all
+import igma.tasks.all  # noqa: F401
 from legged_gym.utils import get_args, task_registry
 from isaacgymenvs.utils.reformat import omegaconf_to_dict
+from igma.utils.paths import get_cfg_dir
 from igma.utils.omegaconf import register_resolvers
 from igma.utils.registry import make
 from igma.wrappers.rsl_rl import patch_env, get_default_train_args
@@ -45,7 +46,7 @@ def train(args=None):
     policy = ppo_runner.get_inference_policy(device=env.device)
 
     obs = env.get_observations()
-    for i in range(10*int(env.max_episode_length)):
+    for i in range(10 * int(env.max_episode_length)):
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
 
@@ -55,4 +56,4 @@ if __name__ == '__main__':
         train()
     else:
         register_resolvers()
-        hydra.main(config_name="config", config_path="./cfg")(train)()
+        hydra.main(config_name="config", config_path=get_cfg_dir())(train)()

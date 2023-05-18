@@ -1,0 +1,36 @@
+[project]
+name = "IsaacGymMultiAgent"
+version = "0.0.1"
+description = "Supercharged Isaac Gym environments with multi-agent and multi-algorithm support"
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["IsaacGym", "Reinforcement Learning"]
+authors = [
+  {name = "Yunfeng Lin", email = "linyunfeng@sjtu.edu.cn" }
+]
+maintainers = [
+  {name = "Yunfeng Lin", email = "linyunfeng@sjtu.edu.cn" }
+]
+dependencies = [
+  "hydra-core",
+]
+
+[project.optional-dependencies]
+dev = ["check-manifest"]
+test = ["coverage"]
+
+[project.urls]
+"Homepage" = "https://github.com/CreeperLin/IsaacGymMultiAgents"
+"Bug Tracker" = "https://github.com/CreeperLin/IsaacGymMultiAgents/issues"
+
+[build-system]
+requires = ["setuptools>=43.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["igma*"]
+
+[tool.yapf]
+based_on_style = "google"
+column_limit = 120

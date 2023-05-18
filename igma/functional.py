@@ -1,18 +1,12 @@
 import math
-from isaacgym import gymtorch
+from isaacgym import gymtorch  # noqa: F401
 from isaacgym import gymapi
 import torch
 from torch import Tensor
 
 
 @torch.jit.script
-def find_target_nearest_neighbors(
-    pos: Tensor,
-    target: Tensor,
-    num_groups: int = 1,
-    k: int = 0,
-    max_dist: int = 0
-):
+def find_target_nearest_neighbors(pos: Tensor, target: Tensor, num_groups: int = 1, k: int = 0, max_dist: int = 0):
     # dist = torch.square((pos.unsqueeze(0) - target.unsqueeze(1))).sum(dim=-1)   # [T, N]
     dist = torch.cdist(target.view(num_groups, -1, 3), pos.view(num_groups, -1, 3))
     if k:
@@ -22,7 +16,7 @@ def find_target_nearest_neighbors(
         return ind
     all_ind = torch.arange(0, len(pos)).repeat(len(target), 1).to(device=pos.device)
     if max_dist:
-        return all_ind[dist < (max_dist ** 2)]
+        return all_ind[dist < (max_dist**2)]
     return all_ind
 
 
@@ -33,12 +27,12 @@ def find_all_nearest_neighbors(
     k: int,
     max_dist: float = 0.,
 ) -> Tensor:
-    pos = pos.view(num_groups, -1, 3)   # [E, N, 3]
-    dist = torch.cdist(pos, pos)    # [E, N, N]
-    val, ind = torch.topk(dist, k + 1, largest=False)     # [E, N, K+1]
+    pos = pos.view(num_groups, -1, 3)  # [E, N, 3]
+    dist = torch.cdist(pos, pos)  # [E, N, N]
+    val, ind = torch.topk(dist, k + 1, largest=False)  # [E, N, K+1]
     if max_dist:
         ind[val > max_dist] = -1
-    ind = ind[:, :, 1:]     # [E, N, K]
+    ind = ind[:, :, 1:]  # [E, N, K]
     return ind
 
 
@@ -49,9 +43,7 @@ def select_by_env_index(
     num_envs: int,
     num_agents: int,
 ) -> Tensor:
-    return x.view(num_envs, num_agents, -1)[
-        torch.arange(0, num_envs).view(num_envs, 1, 1), ind
-    ]   # [E, N, M, S]
+    return x.view(num_envs, num_agents, -1)[torch.arange(0, num_envs).view(num_envs, 1, 1), ind]  # [E, N, M, S]
 
 
 @torch.jit.script
@@ -61,25 +53,17 @@ def rel_pos_by_env_index(
     num_envs: int,
     num_agents: int,
 ) -> Tensor:
-    epos = pos.view(num_envs, num_agents, -1)   # [E, N, 3]
-    rel_pos = epos.unsqueeze(2) - epos.unsqueeze(1)    # [E, N, N, 3]
-    return rel_pos[
-        torch.arange(0, num_envs).view(num_envs, 1, 1), torch.arange(0, num_agents).view(1, num_agents, 1), ind
-    ]   # [E, N, M, 3]
+    epos = pos.view(num_envs, num_agents, -1)  # [E, N, 3]
+    rel_pos = epos.unsqueeze(2) - epos.unsqueeze(1)  # [E, N, N, 3]
+    return rel_pos[torch.arange(0, num_envs).view(num_envs, 1, 1),
+                   torch.arange(0, num_agents).view(1, num_agents, 1), ind]  # [E, N, M, 3]
 
 
 @torch.jit.script
-def is_same_team_index(
-    ind: Tensor,
-    num_envs: int,
-    num_agents: int,
-    num_teams: int
-) -> Tensor:
+def is_same_team_index(ind: Tensor, num_envs: int, num_agents: int, num_teams: int) -> Tensor:
     num_agts_team = num_agents // num_teams
-    return (
-        (torch.arange(0, num_agents, device=ind.device) // num_agts_team).repeat(num_envs, 1).unsqueeze(-1)
-        == (ind // num_agts_team)
-    )   # [E, N, M]
+    return ((torch.arange(0, num_agents, device=ind.device) // num_agts_team).repeat(
+        num_envs, 1).unsqueeze(-1) == (ind // num_agts_team))  # [E, N, M]
 
 
 @torch.jit.script
@@ -90,9 +74,8 @@ def reset_any_team_all_terminated(
     num_teams: int,
 ) -> Tensor:
     reset_ones = torch.ones_like(reset)
-    return torch.where(
-        torch.any(torch.all(terminated.view(num_envs, num_teams, -1), dim=-1), dim=-1), reset_ones, reset
-    )
+    return torch.where(torch.any(torch.all(terminated.view(num_envs, num_teams, -1), dim=-1), dim=-1), reset_ones,
+                       reset)
 
 
 @torch.jit.script
@@ -103,9 +86,7 @@ def reset_max_episode_length(
     max_episode_length: int,
 ) -> Tensor:
     reset_ones = torch.ones_like(reset)
-    return torch.where(
-        torch.all(progress_buf.view(num_envs, -1) >= max_episode_length - 1, dim=-1), reset_ones, reset
-    )
+    return torch.where(torch.all(progress_buf.view(num_envs, -1) >= max_episode_length - 1, dim=-1), reset_ones, reset)
 
 
 @torch.jit.script

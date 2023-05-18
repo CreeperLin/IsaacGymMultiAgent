@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Sequence, Type, Union
+from typing import Any, List, Optional, Sequence, Type, Union
 
 import torch
 import gym

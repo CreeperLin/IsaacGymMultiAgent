@@ -4,7 +4,7 @@ import torch
 from functools import partial
 from argparse import Namespace
 from isaacgym import gymapi
-from legged_gym.envs import *
+from legged_gym.envs import *  # noqa: F401, F403
 from legged_gym.utils import task_registry
 from igma.utils.registry import register
 
@@ -36,11 +36,11 @@ def update_cfg(dest, src):
 
 
 def patch_env(env):
-    env.observation_space = spaces.Box(*[(-1)**(i+1) * np.Inf * np.ones(env.num_obs) for i in range(2)])
+    env.observation_space = spaces.Box(*[(-1)**(i + 1) * np.Inf * np.ones(env.num_obs) for i in range(2)])
     env.num_states = env.num_privileged_obs or 0
     if env.num_privileged_obs:
-        env.state_space = spaces.Box(*[(-1)**(i+1) * np.Inf * np.ones(env.num_privileged_obs) for i in range(2)])
-    env.action_space = spaces.Box(*[(-1)**(i+1) * np.ones(env.num_actions) for i in range(2)])
+        env.state_space = spaces.Box(*[(-1)**(i + 1) * np.Inf * np.ones(env.num_privileged_obs) for i in range(2)])
+    env.action_space = spaces.Box(*[(-1)**(i + 1) * np.ones(env.num_actions) for i in range(2)])
     fn_step = env.step
     fn_reset = env.reset
     env._ori_step = fn_step

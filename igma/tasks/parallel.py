@@ -31,6 +31,7 @@ def _init_sequential(task_fn):
         nonlocal task_ret
         attr = getattr(task, name)
         task_ret = attr(*args, **kwargs) if callable(attr) else attr
+
     return local_send_fn, local_recv_fn, lambda: 0
 
 
@@ -48,6 +49,7 @@ def _init_threading(task_fn,):
 
     def close_fn():
         th.join()
+
     return local_send_fn, local_recv_fn, close_fn
 
 
@@ -66,6 +68,7 @@ def _init_multiprocessing(task_fn, start_method='forkserver'):
 
     def close_fn():
         p.join()
+
     return local_send_fn, local_recv_fn, close_fn
 
 
@@ -89,9 +92,9 @@ class DefaultSplitFn():
         if isinstance(obj, (list, tuple)) and len(obj):
             return zip(*(self(o, sizes, extras) for o in obj))
         if isinstance(obj, dict) and len(obj):
-            return [
-                {k: sv for k, sv in zip(obj.keys(), vs)} for vs in zip(*(self(v, sizes, extras) for v in obj.values()))
-            ]
+            return [{
+                k: sv for k, sv in zip(obj.keys(), vs)
+            } for vs in zip(*(self(v, sizes, extras) for v in obj.values()))]
         if isinstance(obj, Tensor):
             tensors = torch.split(obj, split_size_or_sections=(obj.size(0) // sizes), dim=0)
             if self.devices is None:
@@ -159,26 +162,25 @@ _default_wrapped_table.update({k: 1 for k in _default_wrapped})
 
 class EnvParallel():
 
-    def __init__(
-        self, *args,
-        task=None,
-        task_fn=None,
-        num_tasks=None,
-        devices=None,
-        overrides=None,
-        override_setter=None,
-        split_fn=None,
-        merge_fn=None,
-        merge_device=None,
-        task_args=None,
-        task_kwargs=None,
-        task_cfg=None,
-        wrapped_table=None,
-        parallel_type='multiprocessing',
-        parallel_kwargs=None,
-        cfg=None,
-        **kwargs
-    ):
+    def __init__(self,
+                 *args,
+                 task=None,
+                 task_fn=None,
+                 num_tasks=None,
+                 devices=None,
+                 overrides=None,
+                 override_setter=None,
+                 split_fn=None,
+                 merge_fn=None,
+                 merge_device=None,
+                 task_args=None,
+                 task_kwargs=None,
+                 task_cfg=None,
+                 wrapped_table=None,
+                 parallel_type='multiprocessing',
+                 parallel_kwargs=None,
+                 cfg=None,
+                 **kwargs):
         if isinstance(cfg, dict):
             cfg.pop('name', None)
             return self.__init__(*args, **cfg, **kwargs)
@@ -220,6 +222,7 @@ class EnvParallel():
     def __getattr__(self, name):
         wrapped_fn = self.wrapped_fns.get(name)
         if wrapped_fn is None:
+
             def wrapped(*args, **kwargs):
                 extras = {'attr': name}
                 list_args_kwargs = self.split_fn((args, kwargs), len(self.ctxs), extras)
@@ -232,6 +235,7 @@ class EnvParallel():
                     ret = local_recv_fn()
                     rets.append(ret)
                 return self.merge_fn(rets, extras)
+
             self.wrapped_fns[name] = wrapped
             wrapped_fn = wrapped
         wrapped = self.wrapped_table.get(name)

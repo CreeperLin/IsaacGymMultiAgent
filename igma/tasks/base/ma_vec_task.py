@@ -46,9 +46,7 @@ class MultiAgentVecTask(VecTask):
         self.cam_pos = [20.0, 25.0, 10.0]
         self.cam_target = [10.0, 15.0, 0.0]
 
-        super().__init__(
-            config=config, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless
-        )
+        super().__init__(config=config, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless)
 
         self.root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
         self.root_states = gymtorch.wrap_tensor(self.root_state_tensor).view(self.num_agts, -1)
@@ -60,7 +58,7 @@ class MultiAgentVecTask(VecTask):
 
         reward_weight = torch.ones((value_size, value_size), device=self.device, dtype=torch.float)
         if zero_sum and value_size > 1:
-            reward_weight *= (-1 / (value_size-1))
+            reward_weight *= (-1 / (value_size - 1))
             reward_weight[[torch.arange(0, value_size)] * 2] = 1.
         self.reward_weight = reward_weight
         self.terminated_buf = torch.zeros(self.num_envs * self.num_agents, device=self.device, dtype=torch.bool)
@@ -77,17 +75,16 @@ class MultiAgentVecTask(VecTask):
             self.replay_device = 'cpu'
             self.replay_actions = torch.zeros(
                 (save_replay_episodes, self.max_episode_length, self.num_agents_export, self.num_actions),
-                device=self.replay_device, dtype=torch.float
-            )
-            self.replay_root_states = torch.zeros(
-                (save_replay_episodes, self.num_agents, 13),
-                device=self.replay_device, dtype=torch.float
-            )
+                device=self.replay_device,
+                dtype=torch.float)
+            self.replay_root_states = torch.zeros((save_replay_episodes, self.num_agents, 13),
+                                                  device=self.replay_device,
+                                                  dtype=torch.float)
             if self.dof_states is not None:
                 self.replay_dof_states = torch.zeros(
                     (save_replay_episodes, self.num_agents, self.dof_states.shape[1], 2),
-                    device=self.replay_device, dtype=torch.float
-                )
+                    device=self.replay_device,
+                    dtype=torch.float)
         self.exec_callback('init')
 
     def add_actor(self, actor_handle):
@@ -114,25 +111,27 @@ class MultiAgentVecTask(VecTask):
         # allocate buffers
         self.obs_buf = torch.zeros(
             # (self.num_envs * self.num_agents_export, self.num_obs), device=self.device, dtype=torch.float)
-            (self.num_envs * self.num_agents, self.num_obs_per_agent), device=self.device, dtype=torch.float)
-        self.states_buf = torch.zeros(
-            (self.num_envs, self.num_states), device=self.device, dtype=torch.float)
+            (self.num_envs * self.num_agents, self.num_obs_per_agent),
+            device=self.device,
+            dtype=torch.float)
+        self.states_buf = torch.zeros((self.num_envs, self.num_states), device=self.device, dtype=torch.float)
         if self.value_size_export == 1:
             rew_size = self.num_envs * self.num_agents_export
         else:
             rew_size = (self.num_envs * self.num_agents_export, self.value_size_export)
-        self.rew_buf = torch.zeros(
-            rew_size, device=self.device, dtype=torch.float)
-        self.reset_buf = torch.ones(
-            self.num_envs, device=self.device, dtype=torch.long)
+        self.rew_buf = torch.zeros(rew_size, device=self.device, dtype=torch.float)
+        self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.long)
         self.timeout_buf = torch.zeros(
             # (self.num_envs), device=self.device, dtype=torch.long)
-            (self.num_envs * self.num_agents_export), device=self.device, dtype=torch.long)
+            (self.num_envs * self.num_agents_export),
+            device=self.device,
+            dtype=torch.long)
         self.progress_buf = torch.zeros(
             # (self.num_envs), device=self.device, dtype=torch.long)
-            (self.num_envs * self.num_agents_export), device=self.device, dtype=torch.long)
-        self.randomize_buf = torch.zeros(
-            self.num_envs, device=self.device, dtype=torch.long)
+            (self.num_envs * self.num_agents_export),
+            device=self.device,
+            dtype=torch.long)
+        self.randomize_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
         self.extras = {}
 
     def zero_actions(self) -> torch.Tensor:
@@ -142,9 +141,9 @@ class MultiAgentVecTask(VecTask):
             A buffer of zero torch actions
         """
         # actions = torch.zeros([self.num_envs, self.num_actions], dtype=torch.float32, device=self.rl_device)
-        actions = torch.zeros(
-            (self.num_envs * self.num_agents_export, self.num_actions), device=self.rl_device, dtype=torch.float
-        )
+        actions = torch.zeros((self.num_envs * self.num_agents_export, self.num_actions),
+                              device=self.rl_device,
+                              dtype=torch.float)
 
         return actions
 
@@ -237,11 +236,8 @@ class MultiAgentVecTask(VecTask):
         return obs_dict, rew_buf, reset_buf, extras
 
     def update_progress(self):
-        self.progress_buf[
-            torch.logical_not(
-                torch.all(self.terminated_buf.view(self.num_envs, self.num_agents_export, -1), dim=-1)
-            ).flatten()
-        ] += 1
+        self.progress_buf[torch.logical_not(
+            torch.all(self.terminated_buf.view(self.num_envs, self.num_agents_export, -1), dim=-1)).flatten()] += 1
 
     def select_terminated(self, x):
         return x.view(self.num_envs * self.num_agents, -1)[self.terminated_buf]
@@ -290,12 +286,9 @@ class MultiAgentVecTask(VecTask):
         if self.headless is False:
             cam_props = gymapi.CameraProperties()
             # subscribe to keyboard shortcuts
-            self.viewer = self.gym.create_viewer(
-                self.sim, cam_props)
-            self.gym.subscribe_viewer_keyboard_event(
-                self.viewer, gymapi.KEY_ESCAPE, "QUIT")
-            self.gym.subscribe_viewer_keyboard_event(
-                self.viewer, gymapi.KEY_V, "toggle_viewer_sync")
+            self.viewer = self.gym.create_viewer(self.sim, cam_props)
+            self.gym.subscribe_viewer_keyboard_event(self.viewer, gymapi.KEY_ESCAPE, "QUIT")
+            self.gym.subscribe_viewer_keyboard_event(self.viewer, gymapi.KEY_V, "toggle_viewer_sync")
 
             # set the camera position based on up axis
             sim_params = self.gym.get_sim_params(self.sim)

@@ -7,9 +7,10 @@ import pprint
 
 import numpy as np
 
-import igma.tasks.all
+import igma.tasks.all  # noqa: F401
 from igma.wrappers.tianshou import IGMAVectorEnv, NestedVectorReplayBuffer
 from igma.utils.registry import make
+from igma.utils.paths import get_cfg_dir
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -21,14 +22,12 @@ from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
 from tianshou.utils.net.continuous import ActorProb, Critic
 
-
 try:
     import hydra
     from igma.utils.omegaconf import register_resolvers
     from isaacgymenvs.utils.reformat import omegaconf_to_dict
 except ImportError:
     hydra = None
-
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(1)
 
@@ -60,16 +59,9 @@ def get_args():
     parser.add_argument('--test-env', type=bool, default=False)
     parser.add_argument('--logdir', type=str, default='log')
     parser.add_argument('--render', type=float, default=0.)
-    parser.add_argument(
-        '--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu'
-    )
+    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--resume-path', type=str, default=None)
-    parser.add_argument(
-        '--watch',
-        default=False,
-        action='store_true',
-        help='watch the play of pre-trained policy only'
-    )
+    parser.add_argument('--watch', default=False, action='store_true', help='watch the play of pre-trained policy only')
 
     return parser.parse_args('')
 
@@ -106,29 +98,15 @@ def test_sac(cfg):
     train_envs.seed(args.seed)
     # model
     net_a = Net(args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-    actor = ActorProb(
-        net_a,
-        args.action_shape,
-        max_action=args.max_action,
-        device=args.device,
-        unbounded=True,
-        conditioned_sigma=True
-    ).to(args.device)
+    actor = ActorProb(net_a,
+                      args.action_shape,
+                      max_action=args.max_action,
+                      device=args.device,
+                      unbounded=True,
+                      conditioned_sigma=True).to(args.device)
     actor_optim = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
-    net_c1 = Net(
-        args.state_shape,
-        args.action_shape,
-        hidden_sizes=args.hidden_sizes,
-        concat=True,
-        device=args.device
-    )
-    net_c2 = Net(
-        args.state_shape,
-        args.action_shape,
-        hidden_sizes=args.hidden_sizes,
-        concat=True,
-        device=args.device
-    )
+    net_c1 = Net(args.state_shape, args.action_shape, hidden_sizes=args.hidden_sizes, concat=True, device=args.device)
+    net_c2 = Net(args.state_shape, args.action_shape, hidden_sizes=args.hidden_sizes, concat=True, device=args.device)
     critic1 = Critic(net_c1, device=args.device).to(args.device)
     critic1_optim = torch.optim.Adam(critic1.parameters(), lr=args.critic_lr)
     critic2 = Critic(net_c2, device=args.device).to(args.device)
@@ -140,19 +118,17 @@ def test_sac(cfg):
         alpha_optim = torch.optim.Adam([log_alpha], lr=args.alpha_lr)
         args.alpha = (target_entropy, log_alpha, alpha_optim)
 
-    policy = SACPolicy(
-        actor,
-        actor_optim,
-        critic1,
-        critic1_optim,
-        critic2,
-        critic2_optim,
-        tau=args.tau,
-        gamma=args.gamma,
-        alpha=args.alpha,
-        estimation_step=args.n_step,
-        action_space=env.action_space
-    )
+    policy = SACPolicy(actor,
+                       actor_optim,
+                       critic1,
+                       critic1_optim,
+                       critic2,
+                       critic2_optim,
+                       tau=args.tau,
+                       gamma=args.gamma,
+                       alpha=args.alpha,
+                       estimation_step=args.n_step,
+                       action_space=env.action_space)
 
     # load a previous policy
     if args.resume_path:
@@ -182,20 +158,18 @@ def test_sac(cfg):
 
     if not args.watch:
         # trainer
-        result = offpolicy_trainer(
-            policy,
-            train_collector,
-            test_collector,
-            args.epoch,
-            args.step_per_epoch,
-            args.step_per_collect,
-            args.test_num,
-            args.batch_size,
-            save_fn=save_fn,
-            logger=logger,
-            update_per_step=args.update_per_step,
-            test_in_train=False
-        )
+        result = offpolicy_trainer(policy,
+                                   train_collector,
+                                   test_collector,
+                                   args.epoch,
+                                   args.step_per_epoch,
+                                   args.step_per_collect,
+                                   args.test_num,
+                                   args.batch_size,
+                                   save_fn=save_fn,
+                                   logger=logger,
+                                   update_per_step=args.update_per_step,
+                                   test_in_train=False)
         pprint.pprint(result)
 
     # Let's watch its performance!
@@ -212,4 +186,4 @@ if __name__ == '__main__':
         test_sac(yaml.safe_load_all(open('./config.yml', 'r')))
     else:
         register_resolvers()
-        hydra.main(config_name="config", config_path="./cfg")(test_sac)()
+        hydra.main(config_name="config", config_path=get_cfg_dir())(test_sac)()

@@ -1,4 +1,3 @@
-
 from typing import Tuple
 
 import math
@@ -8,14 +7,13 @@ from torch import Tensor
 import xml.etree.ElementTree as ET
 
 from isaacgym import gymutil, gymtorch, gymapi
-from isaacgym.torch_utils import tensor_clamp, torch_rand_float, to_torch
-from isaacgymenvs.utils.torch_jit_utils import quat_axis
+from isaacgym.torch_utils import torch_rand_float
 from igma.tasks.base.ma_vec_task import MultiAgentVecTask
 from igma.functional import reset_any_team_all_terminated, reset_max_episode_length,\
     find_all_nearest_neighbors, select_by_env_index, is_same_team_index, rel_pos_by_env_index,\
-    reward_agg_sum, reward_reweight_team,\
+    reward_agg_sum,\
     terminated_buf_update,\
-    start_pos_circle, start_pos_normal, start_pos_uniform
+    start_pos_uniform
 
 
 class BallJoust(MultiAgentVecTask):
@@ -45,9 +43,10 @@ class BallJoust(MultiAgentVecTask):
         self.radius = 3.0 + n_agts
         self.center = torch.tensor(cfg["env"].get("centerPos", [0, 0, 1. + self.radius]), device=sim_device)
 
-        super().__init__(
-            config=self.cfg, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless
-        )
+        super().__init__(config=self.cfg,
+                         sim_device=sim_device,
+                         graphics_device_id=graphics_device_id,
+                         headless=headless)
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
@@ -170,9 +169,8 @@ class BallJoust(MultiAgentVecTask):
         self.root_states[agt_ids, 0] += torch_rand_float(-0.05, 0.05, (num_resets, 1), self.device).flatten()
         self.root_states[agt_ids, 1] += torch_rand_float(-0.05, 0.05, (num_resets, 1), self.device).flatten()
         self.root_states[agt_ids, 2] += torch_rand_float(-0.05, 0.05, (num_resets, 1), self.device).flatten()
-        self.gym.set_actor_root_state_tensor_indexed(
-            self.sim, self.root_state_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets
-        )
+        self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_state_tensor,
+                                                     gymtorch.unwrap_tensor(actor_indices), num_resets)
         # self.dirs[agt_ids] = torch_rand_float(-0.5, 0.5, (num_resets, 2), self.device)
 
         super().reset_idx(env_ids)
@@ -298,13 +296,8 @@ class BallJoust(MultiAgentVecTask):
             self.num_envs,
             self.num_agents,
             self.num_teams,
-            self.value_size
-        )
+            self.value_size)
 
-
-#####################################################################
-###=========================jit functions=========================###
-#####################################################################
 
 @torch.jit.script
 def compute_balljoust_observations(
@@ -387,7 +380,7 @@ def compute_balljoust_reward(
     # print(center)
     # pos_reward_coef = 0.1
     pos_reward_coef = 1.0
-    pos_reward = pos_reward_coef / (1.0 + root_dist ** 2)
+    pos_reward = pos_reward_coef / (1.0 + root_dist**2)
     # pos_reward = pos_reward_coef * torch.exp(-root_dist)
     # pos_reward = 0
 
@@ -414,21 +407,22 @@ def compute_balljoust_reward(
 
     # combined reward
     # uprigness and spinning only matter when close to the target
-        # + z_pos * 0.5 \
-        # + spinnage_reward * 0.5 \
+    # + z_pos * 0.5 \
+    # + spinnage_reward * 0.5 \
     reward = 0 \
         + pos_reward \
         + thrusts_cost \
         # + move_center_reward \
-        # + alive_reward \
-        # + pos_reward * (up_reward + spinnage_reward)
+
+    # + alive_reward \
+    # + pos_reward * (up_reward + spinnage_reward)
 
     # resets due to misbehavior
     boundary = 3.0 + num_agents
     ones = torch.ones_like(z_pos, dtype=torch.bool)
     terminated = torch.zeros_like(z_pos, dtype=torch.bool)
     terminated = torch.where(root_dist > boundary, ones, terminated)
-    cod_buf = torch.where(root_dist > boundary, ones*1, cod_buf)
+    cod_buf = torch.where(root_dist > boundary, ones * 1, cod_buf)
     # terminated = torch.where(root_positions[..., 2] < 0.3, ones, terminated)
     # cod_buf = torch.where(root_positions[..., 2] < 0.3, ones*2, cod_buf)
 
@@ -438,8 +432,8 @@ def compute_balljoust_reward(
 
     if num_agents > 1:
         pos = root_positions.view(num_envs, num_agents, -1)
-        dist = torch.cdist(pos, pos)    # [E, N, N]
-        val, ind = [r[:, :, 1] for r in torch.topk(dist, 2, largest=False)]     # [E, N]
+        dist = torch.cdist(pos, pos)  # [E, N, N]
+        val, ind = [r[:, :, 1] for r in torch.topk(dist, 2, largest=False)]  # [E, N]
         env_idx = torch.arange(0, num_envs).view(num_envs, 1)
         target_alive = torch.logical_not(terminated_buf.view(num_envs, num_agents)[env_idx, ind])
         precond = torch.logical_and(target_alive, val < 0.25)
@@ -452,7 +446,7 @@ def compute_balljoust_reward(
         jousted = torch.logical_and(precond, tgt_dist - root_dist > 0.1)
         jouster = torch.logical_and(precond, root_dist - tgt_dist > 0.1)
         terminated = torch.where(jousted.flatten(), ones, terminated)
-        cod_buf = torch.where(jousted.flatten(), ones*3, cod_buf)
+        cod_buf = torch.where(jousted.flatten(), ones * 3, cod_buf)
         killed_cost = -2.0
         reward = torch.where(jousted.flatten(), torch.ones_like(reward) * killed_cost, reward)
         joust_score = 1000

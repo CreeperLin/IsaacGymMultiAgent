@@ -4,7 +4,6 @@ import time
 from typing import Dict, Any
 from isaacgym import gymapi
 
-
 _default_sim_params = {
     'dt': 0.01,
     'substeps': 2,
@@ -48,23 +47,21 @@ def default_viewer_cam_setter(gym, sim, viewer, envs):
     gym.viewer_camera_look_at(viewer, env, gymapi.Vec3(*cam_pos), gymapi.Vec3(*cam_target))
 
 
-def create_actors(
-    asset_file_setter=None,
-    asset_options_setter=None,
-    asset_setter=None,
-    pose_setter=None,
-    actor_setter=None,
-    env_setter=None,
-    gym=None,
-    sim=None,
-    name=None,
-    asset_root='.',
-    collision_group_setter=None,
-    collision_filter_setter=None,
-    num_envs=1,
-    num_env_actors=1,
-    spacing=1.0
-):
+def create_actors(asset_file_setter=None,
+                  asset_options_setter=None,
+                  asset_setter=None,
+                  pose_setter=None,
+                  actor_setter=None,
+                  env_setter=None,
+                  gym=None,
+                  sim=None,
+                  name=None,
+                  asset_root='.',
+                  collision_group_setter=None,
+                  collision_filter_setter=None,
+                  num_envs=1,
+                  num_env_actors=1,
+                  spacing=1.0):
     num_per_row = int(math.sqrt(num_envs))
     lower = gymapi.Vec3(-spacing, -spacing, 0.0)
     upper = gymapi.Vec3(spacing, spacing, spacing)
@@ -214,17 +211,27 @@ class Testbench():
         self.num_env_actors = num_env_actors
         self.event_handlers = event_handlers or {}
         if collision_type == 'all':
-            def collision_group_setter_all(e, a): return 0
+
+            def collision_group_setter_all(e, a):
+                return 0
+
             collision_group_setter = collision_group_setter_all
         elif collision_type == 'none':
             # def collision_group_setter_none(e, a): return 0
             # def collision_filter_setter_none(e, a): return 1
-            def collision_group_setter_none(e, a): return e * 0xFFFFF + a
-            def collision_filter_setter_none(e, a): return 0
+            def collision_group_setter_none(e, a):
+                return e * 0xFFFFF + a
+
+            def collision_filter_setter_none(e, a):
+                return 0
+
             collision_group_setter = collision_group_setter_none
             collision_filter_setter = collision_filter_setter_none
         elif collision_type == 'env':
-            def collision_group_setter_env(e, a): return e
+
+            def collision_group_setter_env(e, a):
+                return e
+
             collision_group_setter = collision_group_setter_env
         self.collision_group_setter = collision_group_setter
         self.collision_filter_setter = collision_filter_setter
@@ -278,17 +285,19 @@ class Testbench():
             step += 1
             self.render()
             self.step()
-            if (step+1) == fps_window:
+            if (step + 1) == fps_window:
                 t1 = time.monotonic()
-                print('fps: {}'.format(fps_window / (t1-t0)))
+                print('fps: {}'.format(fps_window / (t1 - t0)))
                 t0 = t1
                 step = -1
 
     def create_sim(self):
         self.scene_setter(self.gym, self.sim)
         if self.asset_file_setter is None:
+
             def asset_file_setter_const(*args, **kwargs):
                 return self.asset_file
+
             asset_file_setter = asset_file_setter_const
         else:
             asset_file_setter = self.asset_file_setter
@@ -298,7 +307,8 @@ class Testbench():
             asset_options_setter=self.asset_options_setter,
             asset_setter=self.asset_setter,
             pose_setter=self.pose_setter,
-            gym=self.gym, sim=self.sim,
+            gym=self.gym,
+            sim=self.sim,
             collision_group_setter=self.collision_group_setter,
             collision_filter_setter=self.collision_filter_setter,
             spacing=self.spacing,

@@ -53,8 +53,7 @@ class External(Env):
         self.action_fn(to_device(actions, self.device))
         self.step_fn()
         return (
-            to_device(ret, self.rl_device) for ret in (self.obs_fn(), self.rew_fn(), self.done_fn(), self.info_fn())
-        )
+            to_device(ret, self.rl_device) for ret in (self.obs_fn(), self.rew_fn(), self.done_fn(), self.info_fn()))
 
     def reset(self) -> Dict[str, torch.Tensor]:
         """Reset the environment.

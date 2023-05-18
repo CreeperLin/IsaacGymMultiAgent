@@ -1,4 +1,6 @@
 """Patch for IsaacGymEnvs."""
+import inspect
+import os
 import sys
 import pkgutil
 import importlib
@@ -9,15 +11,18 @@ from typing import Optional, Sequence, Union
 import types
 
 import isaacgymenvs
-isaacgymenvs_modules = list(map(lambda x: x.name, pkgutil.iter_modules(isaacgymenvs.__path__)))
+
+isaacgymenvs_path = [os.path.dirname(inspect.getfile(isaacgymenvs))]
+isaacgymenvs_modules = list(map(lambda x: x.name, pkgutil.iter_modules(isaacgymenvs_path)))
 
 
 class IGEImporter(Loader, MetaPathFinder):
     """Patch using import hooks (PEP 302)."""
 
-    def find_spec(
-        self, fullname: str, path: Optional[Sequence[Union[bytes, str]]], target: Optional[types.ModuleType] = None
-    ) -> Optional[ModuleSpec]:
+    def find_spec(self,
+                  fullname: str,
+                  path: Optional[Sequence[Union[bytes, str]]],
+                  target: Optional[types.ModuleType] = None) -> Optional[ModuleSpec]:
         """Handle isaacgymenvs imports."""
         if fullname in isaacgymenvs_modules:
             return importlib.util.spec_from_loader(fullname, self)
