@@ -54,6 +54,13 @@ cd examples/rsl_rl
 python3 train.py task=Ant
 ```
 
+Run IsaacGym environments with stable-baselines3 PPO
+
+```bash
+cd examples/sb3
+python3 train.py task=Ant train=sb3ppo
+```
+
 ### Playing
 
 ```bash
