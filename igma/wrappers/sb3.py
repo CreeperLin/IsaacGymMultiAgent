@@ -22,40 +22,37 @@ def patch_space(space):
 
 class IGMAVecEnv(VecEnv):
 
-    def __init__(self, env: VecTask):
+    def __init__(self, env: VecTask, use_gymnasium_spaces=False, buf_transform_fn=None):
         self.env = env
-        VecEnv.__init__(self, env.num_environments, patch_space(env.observation_space), patch_space(env.action_space))
+        obs_space, act_space = env.observation_space, env.action_space
+        if use_gymnasium_spaces:
+            obs_space, act_space = patch_space(obs_space), patch_space(act_space)
+        VecEnv.__init__(self, env.num_environments, obs_space, act_space)
         self.actions = None
-        self.dones = np.zeros(env.num_environments)
+        self.buf_transform_fn = lambda x: x.cpu().numpy() if buf_transform_fn is None else buf_transform_fn
         self.metadata = getattr(env, 'metadata', None)
 
     def step_async(self, actions: np.ndarray) -> None:
-        self.actions = torch.from_numpy(actions)
+        self.actions = torch.as_tensor(actions)
 
     def step_wait(self) -> VecEnvStepReturn:
         obs_dict, rew_buf, reset_buf, extras = self.env.step(self.actions)
         obs_buf = obs_dict['obs']
-        obs_buf = self._transform_buf(obs_buf)
-        rew_buf = self._transform_buf(rew_buf)
-        reset_buf = self._transform_buf(reset_buf)
+        obs_buf = self.buf_transform_fn(obs_buf)
+        rew_buf = self.buf_transform_fn(rew_buf)
+        reset_buf = self.buf_transform_fn(reset_buf)
         if not isinstance(extras, (list, tuple)):
-            extras = [extras] * self.env.num_environments
-        # print(reset_buf)
-        self.dones = np.logical_or(self.dones, reset_buf)
-        # print(self.dones)
-        return obs_buf, rew_buf, self.dones, extras
+            extras = [extras] * self.num_envs
+        return obs_buf, rew_buf, reset_buf, extras
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         return [seed for _ in self.num_envs]
 
-    def _transform_buf(self, buf):
-        return buf.cpu().numpy()
-
     def reset(self) -> VecEnvObs:
-        self.dones.fill(0)
         obs_dict = self.env.reset()
         obs_buf = obs_dict['obs']
-        return self._transform_buf(obs_buf)
+        obs_buf = self.buf_transform_fn(obs_buf)
+        return obs_buf
 
     def close(self) -> None:
         getattr(self.env, 'close', lambda: None)()

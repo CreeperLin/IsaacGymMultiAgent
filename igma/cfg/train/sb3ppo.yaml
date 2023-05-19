@@ -1,0 +1,21 @@
+model_cls: PPO
+model_args:
+  policy: MlpPolicy
+  learning_rate: 0.0026
+  n_steps: 16
+  batch_size: 32768
+  max_grad_norm: 1.0
+  n_epochs: 4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  clip_range_vf: null
+  normalize_advantage: True
+  ent_coef: 0.0
+  vf_coef: 2
+  policy_kwargs:
+    net_arch: [256, 128, 64]
+  verbose: 2
+  tensorboard_log: ./logs
+learn:
+  total_timesteps: 30_000_000

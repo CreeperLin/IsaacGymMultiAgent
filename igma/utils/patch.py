@@ -14,6 +14,7 @@ import isaacgymenvs
 
 isaacgymenvs_path = [os.path.dirname(inspect.getfile(isaacgymenvs))]
 isaacgymenvs_modules = list(map(lambda x: x.name, pkgutil.iter_modules(isaacgymenvs_path)))
+# isaacgymenvs_modules = list(os.walk(isaacgymenvs_path[0]))[0][1]
 
 
 class IGEImporter(Loader, MetaPathFinder):

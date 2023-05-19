@@ -2,7 +2,6 @@ import os
 import igma
 import inspect
 
-
 igma_root_dir = os.path.dirname(inspect.getfile(igma))
 
 

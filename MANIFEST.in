@@ -8,5 +8,6 @@ recursive-include examples *.yaml
 recursive-include tests *.py
 recursive-include tests *.yml
 recursive-include tests *.yaml
+recursive-include igma *.yaml
 include .coveragerc
 include *.md

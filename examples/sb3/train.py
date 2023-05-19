@@ -25,22 +25,23 @@ def main(cfg):
         force_render=cfg['force_render'],
     )
     env = IGMAVecEnv(env)
-
-    tot_steps = 1e6
-    model_cls = getattr(stable_baselines3, cfg.get('model_cls', 'PPO'))
-    model = model_cls("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=tot_steps)
+    train_cfg = cfg['train']
+    model_cls = getattr(stable_baselines3, train_cfg['model_cls'])
+    model = model_cls(env=env, **train_cfg['model_args'])
+    model.learn(**train_cfg['learn'])
     model.save('./ckpt.zip')
 
     for _ in range(3):
         obs = env.reset()
         rew = 0
+        recorded_dones = np.zeros(env.num_envs)
         while True:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
             env.render()
-            rew += np.mean(reward * np.logical_not(done))
-            if np.all(done):
+            recorded_dones = np.logical_or(recorded_dones, done)
+            rew += np.mean(reward * np.logical_not(recorded_dones))
+            if np.all(recorded_dones):
                 print('mean reward', rew)
                 break
     env.close()
