@@ -11,6 +11,7 @@ import numpy as np
 
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv, VecEnvIndices, VecEnvObs, VecEnvStepReturn
 from isaacgymenvs.tasks.base.vec_task import VecTask
+from .transformed import TransformedVecTask
 
 
 def patch_space(space):
@@ -22,37 +23,25 @@ def patch_space(space):
 
 class IGMAVecEnv(VecEnv):
 
-    def __init__(self, env: VecTask, use_gymnasium_spaces=False, buf_transform_fn=None):
+    def __init__(self, env: VecTask, **kwargs):
+        t_env = TransformedVecTask(env, **kwargs)
+        self.t_env = t_env
         self.env = env
-        obs_space, act_space = env.observation_space, env.action_space
-        if use_gymnasium_spaces:
-            obs_space, act_space = patch_space(obs_space), patch_space(act_space)
-        VecEnv.__init__(self, env.num_environments, obs_space, act_space)
+        VecEnv.__init__(self, env.num_environments, t_env.observation_space, t_env.action_space)
         self.actions = None
-        self.buf_transform_fn = lambda x: x.cpu().numpy() if buf_transform_fn is None else buf_transform_fn
         self.metadata = getattr(env, 'metadata', None)
 
     def step_async(self, actions: np.ndarray) -> None:
-        self.actions = torch.as_tensor(actions)
+        self.actions = actions
 
     def step_wait(self) -> VecEnvStepReturn:
-        obs_dict, rew_buf, reset_buf, extras = self.env.step(self.actions)
-        obs_buf = obs_dict['obs']
-        obs_buf = self.buf_transform_fn(obs_buf)
-        rew_buf = self.buf_transform_fn(rew_buf)
-        reset_buf = self.buf_transform_fn(reset_buf)
-        if not isinstance(extras, (list, tuple)):
-            extras = [extras] * self.num_envs
-        return obs_buf, rew_buf, reset_buf, extras
+        return self.t_env.step(self.actions)
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         return [seed for _ in self.num_envs]
 
     def reset(self) -> VecEnvObs:
-        obs_dict = self.env.reset()
-        obs_buf = obs_dict['obs']
-        obs_buf = self.buf_transform_fn(obs_buf)
-        return obs_buf
+        return self.t_env.reset()
 
     def close(self) -> None:
         getattr(self.env, 'close', lambda: None)()
