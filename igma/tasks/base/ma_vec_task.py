@@ -8,7 +8,7 @@ from isaacgymenvs.tasks.base.vec_task import VecTask
 
 class MultiAgentVecTask(VecTask):
 
-    def __init__(self, config, sim_device, graphics_device_id, headless):
+    def __init__(self, config, **kwargs):
         self.num_teams = config["env"].get("numTeams", 1)
         self.num_agents_team = config["env"].get("numAgentsPerTeam", 1)
         self.num_agents = self.num_agents_team * self.num_teams
@@ -29,6 +29,8 @@ class MultiAgentVecTask(VecTask):
         self.num_acts_per_agent = config["env"]["numActions"]
         config["env"]["numObservations"] = self.num_obs_per_agent * space_mult
         config["env"]["numActions"] = self.num_acts_per_agent * space_mult
+        self.num_obs_per_actor = config["env"]["numObservations"]
+        self.num_acts_per_actor = config["env"]["numActions"]
         team_colors = [
             (0.97, 0.38, 0.06),
             (0.38, 0.06, 0.97),
@@ -46,7 +48,7 @@ class MultiAgentVecTask(VecTask):
         self.cam_pos = [20.0, 25.0, 10.0]
         self.cam_target = [10.0, 15.0, 0.0]
 
-        super().__init__(config=config, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless)
+        super().__init__(config=config, **kwargs)
 
         self.root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
         self.root_states = gymtorch.wrap_tensor(self.root_state_tensor).view(self.num_agts, -1)
@@ -127,8 +129,8 @@ class MultiAgentVecTask(VecTask):
             device=self.device,
             dtype=torch.long)
         self.progress_buf = torch.zeros(
-            # (self.num_envs), device=self.device, dtype=torch.long)
-            (self.num_envs * self.num_agents_export),
+            (self.num_envs),
+            # (self.num_envs * self.num_agents_export),
             device=self.device,
             dtype=torch.long)
         self.randomize_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
@@ -215,7 +217,7 @@ class MultiAgentVecTask(VecTask):
 
     def get_obs_export(self, obs_buf):
         return torch.clamp(obs_buf, -self.clip_obs, self.clip_obs)\
-            .view(-1, self.num_obs)\
+            .view(-1, self.num_obs_per_actor)\
             .to(self.rl_device)
 
     def step(self, actions: torch.Tensor) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, torch.Tensor, Dict[str, Any]]:
@@ -230,14 +232,15 @@ class MultiAgentVecTask(VecTask):
         obs_dict, rew_buf, reset_buf, extras = super().step(actions)
         self.exec_callback('post_step')
         if self.num_agents_export > 1:
-            obs_dict['obs'] = obs_dict['obs'].view(self.num_envs * self.num_agents_export, self.num_obs)
             reset_buf = reset_buf.repeat(self.num_agents_export)
             # reset_buf = torch.all(self.terminated_buf.view(self.num_envs, self.num_agents_export, -1), dim=-1)
+        obs_dict['obs'] = obs_dict['obs'].view(-1, self.num_obs_per_actor)
         return obs_dict, rew_buf, reset_buf, extras
 
     def update_progress(self):
-        self.progress_buf[torch.logical_not(
-            torch.all(self.terminated_buf.view(self.num_envs, self.num_agents_export, -1), dim=-1)).flatten()] += 1
+        # p_idx = torch.logical_not(torch.all(self.terminated_buf.view(self.num_envs, self.num_agents_export, -1), dim=-1)).flatten()
+        p_idx = torch.logical_not(torch.all(self.terminated_buf.view(self.num_envs, -1), dim=-1)).flatten()
+        self.progress_buf[p_idx] += 1
 
     def select_terminated(self, x):
         return x.view(self.num_envs * self.num_agents, -1)[self.terminated_buf]

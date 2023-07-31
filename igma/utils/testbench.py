@@ -65,7 +65,7 @@ def create_actors(asset_file_setter=None,
     num_per_row = int(math.sqrt(num_envs))
     lower = gymapi.Vec3(-spacing, -spacing, 0.0)
     upper = gymapi.Vec3(spacing, spacing, spacing)
-    asset_map = {}
+    assets = {}
     envs = []
     actor_handles = []
     for env_idx in range(num_envs):
@@ -76,13 +76,13 @@ def create_actors(asset_file_setter=None,
         env = envs[env_idx]
         for actor_idx in range(num_env_actors):
             asset_file = asset_file_setter(env_idx, actor_idx)
-            asset = asset_map.get(asset_file)
+            asset = assets.get(asset_file)
             if asset is None:
                 asset_options = gymapi.AssetOptions()
                 if asset_options_setter is not None:
                     asset_options_setter(asset_options)
                 asset = gym.load_asset(sim, asset_root, asset_file, asset_options)
-                asset_map[asset_file] = asset
+                assets[asset_file] = asset
             if asset_setter is not None:
                 asset_setter(gym, sim, asset, env_idx, actor_idx)
             if pose_setter is not None:
@@ -97,7 +97,7 @@ def create_actors(asset_file_setter=None,
     if env_setter is not None:
         for env_idx in range(num_envs):
             env_setter(gym, sim, envs[env_idx], env_idx)
-    return envs, actor_handles, asset
+    return envs, actor_handles, assets
 
 
 def init_viewer(gym, sim, events=None):
@@ -182,13 +182,13 @@ class Testbench():
         device_id = int(split_device[1]) if len(split_device) > 1 else 0
         graphics_device_id = device_id if graphics_device_id is None else graphics_device_id
         device = "cpu"
-        if sim_params["use_gpu_pipeline"]:
-            if device_type.lower() == "cuda" or device_type.lower() == "gpu":
-                device = "cuda" + ":" + str(device_id)
-            else:
-                print("GPU Pipeline can only be used with GPU simulation. Forcing CPU Pipeline.")
-                sim_params["use_gpu_pipeline"] = False
-        sim_params = parse_sim_params(physics_engine, (sim_params or _default_sim_params))
+        sim_params = _default_sim_params.copy() if sim_params is None else sim_params
+        if device_type.lower() == "cuda" or device_type.lower() == "gpu":
+            device = "cuda" + ":" + str(device_id)
+        elif sim_params["use_gpu_pipeline"]:
+            print("GPU Pipeline can only be used with GPU simulation. Forcing CPU Pipeline.")
+            sim_params["use_gpu_pipeline"] = False
+        sim_params = parse_sim_params(physics_engine, sim_params)
         if physics_engine == 'physx':
             physics_engine = gymapi.SIM_PHYSX
         elif physics_engine == 'flex':
@@ -301,7 +301,7 @@ class Testbench():
             asset_file_setter = asset_file_setter_const
         else:
             asset_file_setter = self.asset_file_setter
-        self.envs, self.actor_handles, self.asset = create_actors(
+        self.envs, self.actor_handles, self.assets = create_actors(
             asset_file_setter=asset_file_setter,
             asset_root=self.asset_root,
             asset_options_setter=self.asset_options_setter,
@@ -317,10 +317,3 @@ class Testbench():
             actor_setter=self.actor_setter,
             env_setter=self.env_setter,
         )
-
-
-if __name__ == '__main__':
-    asset_root = '/home/yflin/GitRepo/unitree_pybullet/data/a1/urdf'
-    asset_file = 'a1.urdf'
-    bench = Testbench(asset_root=asset_root, asset_file=asset_file)
-    bench.run()

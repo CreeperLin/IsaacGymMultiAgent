@@ -1,3 +1,4 @@
+import base64
 from omegaconf import OmegaConf
 
 # Resolvers used in hydra configs (see https://omegaconf.readthedocs.io/en/2.1_branch/usage.html#resolvers)
@@ -7,6 +8,7 @@ _resolvers = {
     'if': lambda pred, a, b: a if pred else b,
     'resolve_default': lambda default, arg: default if arg == '' else arg,
     'resolve_eval': lambda fx, *args: eval(fx)(*args),
+    'resolve_eval_b64': lambda fx, *args: eval(base64.b64decode(fx).decode())(*args),
 }
 
 

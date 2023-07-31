@@ -8,6 +8,7 @@ try:
 except ImportError:
     gymnasium = None
 import numpy as np
+import torch
 
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv, VecEnvIndices, VecEnvObs, VecEnvStepReturn
 from isaacgymenvs.tasks.base.vec_task import VecTask
@@ -32,7 +33,7 @@ class IGMAVecEnv(VecEnv):
         self.metadata = getattr(env, 'metadata', None)
 
     def step_async(self, actions: np.ndarray) -> None:
-        self.actions = actions
+        self.actions = torch.from_numpy(actions)
 
     def step_wait(self) -> VecEnvStepReturn:
         return self.t_env.step(self.actions)
@@ -50,7 +51,8 @@ class IGMAVecEnv(VecEnv):
         return self.env.render(mode="rgb_array")
 
     def render(self, mode: str = "human") -> Optional[np.ndarray]:
-        return self.env.render(mode=mode)
+        # return self.env.render(mode=mode)
+        return self.env.render()
 
     def get_attr(self, attr_name: str, indices: VecEnvIndices = None) -> List[Any]:
         """Return attribute from vectorized environment (see base class)."""

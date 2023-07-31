@@ -58,6 +58,9 @@ virtual_screen_capture: False
 # disables rendering
 headless: True
 
+pbt:
+  enabled: False
+
 # set default task and default training config based on task
 defaults:
   - task: Ant

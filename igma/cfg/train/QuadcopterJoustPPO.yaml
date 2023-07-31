@@ -42,7 +42,7 @@ params:
     mixed_precision: False
     normalize_input: True
     normalize_value: True
-    num_actors: ${....task.env.numEnvs}
+    num_actors: ${resolve_eval_b64:bGFtYmRhIHgseTogeCp5,${....task.env.numEnvs},${....task.env.numTeams}}
     reward_shaper:
       scale_value: 0.1
     normalize_advantage: True

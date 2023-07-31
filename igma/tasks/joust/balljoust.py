@@ -18,7 +18,7 @@ from igma.functional import reset_any_team_all_terminated, reset_max_episode_len
 
 class BallJoust(MultiAgentVecTask):
 
-    def __init__(self, cfg, sim_device, graphics_device_id, headless):
+    def __init__(self, cfg, sim_device, **kwargs):
         self.cfg = cfg
 
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
@@ -43,10 +43,7 @@ class BallJoust(MultiAgentVecTask):
         self.radius = 3.0 + n_agts
         self.center = torch.tensor(cfg["env"].get("centerPos", [0, 0, 1. + self.radius]), device=sim_device)
 
-        super().__init__(config=self.cfg,
-                         sim_device=sim_device,
-                         graphics_device_id=graphics_device_id,
-                         headless=headless)
+        super().__init__(config=self.cfg, sim_device=sim_device, **kwargs)
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
